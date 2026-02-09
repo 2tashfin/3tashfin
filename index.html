@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="3tashfin">
+<meta name="theme-color" content="#0f1117">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>3tashfin — PDF Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1c25;
+    --surface-2: #22252f;
+    --surface-3: #2a2d39;
+    --border: #2a2d39;
+    --text: #e8e9ed;
+    --text-muted: #8b8f9e;
+    --accent: #6c8aff;
+    --accent-dim: rgba(108, 138, 255, 0.15);
+    --accent-glow: rgba(108, 138, 255, 0.25);
+    --danger: #ff6b6b;
+    --radius: 14px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ═══════════════════ SAFE AREA TOP ═══════════════════ */
+  .safe-top {
+    height: var(--safe-top);
+    min-height: 0px;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+
+  /* ═══════════════════ VIEWS ═══════════════════ */
+  .view { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .view.active { display: flex; }
+
+  /* ═══════════════════ FILE LIST VIEW ═══════════════════ */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px 14px;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.8px;
+    background: linear-gradient(135deg, #e8e9ed 0%, #8b8f9e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header .doc-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .header-actions { display: flex; gap: 8px; }
+
+  .icon-btn {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .icon-btn:active { transform: scale(0.9); background: var(--surface-2); }
+  .icon-btn svg { width: 18px; height: 18px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Search */
+  .search-bar {
+    margin: 0 16px 12px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .search-bar input {
+    width: 100%;
+    padding: 12px 16px 12px 44px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-bar input::placeholder { color: var(--text-muted); }
+  .search-bar input:focus { border-color: var(--accent); }
+  .search-bar svg {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 18px; stroke: var(--text-muted); fill: none; stroke-width: 2;
+  }
+
+  /* File List */
+  .file-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px 120px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 20px 0 10px 4px;
+  }
+  .file-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    animation: slideUp 0.35s ease both;
+    position: relative;
+  }
+  .file-card:active { transform: scale(0.98); background: var(--surface-2); }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .file-card:nth-child(2) { animation-delay: 40ms; }
+  .file-card:nth-child(3) { animation-delay: 80ms; }
+  .file-card:nth-child(4) { animation-delay: 120ms; }
+  .file-card:nth-child(5) { animation-delay: 160ms; }
+  .file-card:nth-child(6) { animation-delay: 200ms; }
+  .file-card:nth-child(7) { animation-delay: 240ms; }
+
+  .file-thumb {
+    width: 48px; height: 62px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+  }
+  .file-thumb::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 13px; height: 13px;
+    background: rgba(0,0,0,0.15);
+    clip-path: polygon(100% 0, 0 100%, 100% 100%);
+  }
+  .thumb-0 { background: linear-gradient(135deg, #6c8aff, #4a6cf7); }
+  .thumb-1 { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+  .thumb-2 { background: linear-gradient(135deg, #2ed573, #17a558); }
+  .thumb-3 { background: linear-gradient(135deg, #a55eea, #8854d0); }
+  .thumb-4 { background: linear-gradient(135deg, #ffa502, #e67e22); }
+  .thumb-5 { background: linear-gradient(135deg, #1dd1a1, #10ac84); }
+  .thumb-6 { background: linear-gradient(135deg, #f368e0, #be2edd); }
+  .thumb-7 { background: linear-gradient(135deg, #54a0ff, #2e86de); }
+
+  .file-info { flex: 1; min-width: 0; }
+  .file-name {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .file-meta .dot { width: 3px; height: 3px; background: var(--text-muted); border-radius: 50%; }
+
+  .file-delete {
+    width: 32px; height: 32px;
+    border: none; background: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    border-radius: 8px;
+    opacity: 0.4;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .file-delete:active { opacity: 1; background: rgba(255, 107, 107, 0.15); }
+  .file-delete svg { width: 16px; height: 16px; stroke: var(--danger); fill: none; stroke-width: 2; }
+
+  /* Empty State */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 40px;
+    text-align: center;
+  }
+  .empty-icon {
+    width: 80px; height: 80px;
+    background: var(--accent-dim);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .empty-icon svg { width: 36px; height: 36px; stroke: var(--accent); fill: none; stroke-width: 1.5; }
+  .empty-state h3 { font-size: 19px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.3px; }
+  .empty-state p { font-size: 14px; color: var(--text-muted); line-height: 1.6; max-width: 260px; }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: calc(76px + var(--safe-bottom));
+    right: 20px;
+    width: 58px; height: 58px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #6c8aff, #4a6cf7);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 24px rgba(108, 138, 255, 0.4);
+    transition: all 0.15s;
+    z-index: 80;
+  }
+  .fab:active { transform: scale(0.88); }
+  .fab svg { width: 26px; height: 26px; stroke: white; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+
+  /* ═══════════════════ PDF VIEWER VIEW ═══════════════════ */
+  .viewer-view { background: var(--surface-3); }
+
+  .viewer-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 10px;
+  }
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 6px 2px;
+    flex-shrink: 0;
+  }
+  .back-btn svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 2.5; }
+  .viewer-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    flex: 1;
+    min-width: 0;
+    letter-spacing: -0.2px;
+  }
+  .page-indicator {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--surface);
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    min-width: 60px;
+    text-align: center;
+  }
+
+  /* Zoom Controls */
+  .zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    position: fixed;
+    bottom: calc(20px + var(--safe-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    z-index: 80;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .zoom-btn {
+    width: 40px; height: 36px;
+    border: none;
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+  .zoom-btn:active { background: var(--surface-2); }
+  .zoom-btn svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; }
+  .zoom-level {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    min-width: 48px;
+    text-align: center;
+  }
+
+  /* PDF Canvas Area */
+  .pdf-scroll {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 8px 80px;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pdf-scroll canvas {
+    display: block;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.35);
+    border-radius: 2px;
+    max-width: 100%;
+    height: auto !important;
+  }
+
+  /* Loading */
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    gap: 16px;
+    transition: opacity 0.3s;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: var(--text-muted); }
+
+  /* ═══════════════════ BOTTOM NAV ═══════════════════ */
+  .bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 6px 16px;
+    padding-bottom: calc(6px + var(--safe-bottom));
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+    flex-shrink: 0;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    background: none;
+  }
+  .nav-item:active { transform: scale(0.9); }
+  .nav-item svg { width: 22px; height: 22px; stroke: var(--text-muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-item span { font-size: 11px; color: var(--text-muted); font-weight: 500; font-family: 'DM Sans', sans-serif; }
+  .nav-item.active svg { stroke: var(--accent); }
+  .nav-item.active span { color: var(--accent); }
+  .nav-item.active { background: var(--accent-dim); }
+
+  /* ═══════════════════ TOAST ═══════════════════ */
+  .toast {
+    position: fixed;
+    top: calc(16px + var(--safe-top));
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 500;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ═══════════════════ CONFIRM DIALOG ═══════════════════ */
+  .confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 300;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    animation: fadeIn 0.2s ease;
+  }
+  .confirm-backdrop.show { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } }
+  .confirm-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px;
+    max-width: 300px;
+    width: 100%;
+    text-align: center;
+    animation: popIn 0.25s ease;
+  }
+  @keyframes popIn { from { transform: scale(0.9); opacity: 0; } }
+  .confirm-box h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .confirm-box p { font-size: 14px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px; }
+  .confirm-actions { display: flex; gap: 10px; }
+  .confirm-actions button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .confirm-actions button:active { transform: scale(0.95); }
+  .btn-cancel { background: var(--surface-2); color: var(--text); }
+  .btn-danger { background: var(--danger); color: white; }
+
+  /* ═══════════════════ SCROLLBAR ═══════════════════ */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="safe-top"></div>
+
+<!-- ═══════════════════ TOAST ═══════════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════ CONFIRM DIALOG ═══════════════════ -->
+<div class="confirm-backdrop" id="confirmBackdrop">
+  <div class="confirm-box">
+    <h3 id="confirmTitle">Delete Document?</h3>
+    <p id="confirmMsg">This action can't be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="btn-danger" id="confirmAction" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ FILE LIST VIEW ═══════════════════ -->
+<div class="view active" id="listView">
+  <div class="header">
+    <div>
+      <h1>3tashfin</h1>
+      <div class="doc-count" id="docCount">0 documents</div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="sortBtn" title="Sort">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h12M3 18h6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="search-bar">
+    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" placeholder="Search documents..." id="searchInput" oninput="filterFiles()" />
+  </div>
+
+  <div class="file-list" id="fileList"></div>
+
+  <button class="fab" id="fabBtn" onclick="document.getElementById('fileInput').click()">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+  <input type="file" id="fileInput" accept="application/pdf" multiple hidden />
+</div>
+
+<!-- ═══════════════════ VIEWER VIEW ═══════════════════ -->
+<div class="view viewer-view" id="viewerView">
+  <div class="viewer-toolbar">
+    <button class="back-btn" onclick="closeViewer()">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      Back
+    </button>
+    <span class="viewer-title" id="viewerTitle">Document</span>
+    <span class="page-indicator" id="pageIndicator">—</span>
+  </div>
+
+  <div class="pdf-scroll" id="pdfScroll">
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="spinner"></div>
+      <span class="loading-text">Rendering PDF…</span>
+    </div>
+  </div>
+
+  <div class="zoom-controls" id="zoomControls">
+    <button class="zoom-btn" onclick="changeZoom(-0.15)">
+      <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+    </button>
+    <span class="zoom-level" id="zoomLevel">100%</span>
+    <button class="zoom-btn" onclick="changeZoom(0.15)">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button class="zoom-btn" onclick="fitWidth()">
+      <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════ BOTTOM NAV ═══════════════════ -->
+<div class="bottom-nav" id="bottomNav">
+  <button class="nav-item active">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <span>Files</span>
+  </button>
+  <button class="nav-item" onclick="showToast('Favorites coming soon')">
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span>Starred</span>
+  </button>
+  <button class="nav-item" onclick="showToast('Settings coming soon')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <span>Settings</span>
+  </button>
+</div>
+
+<!-- ═══════════════════ PDF.js ═══════════════════ -->
+<script type="module">
+import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs';
+
+// ── State ──
+let docs = [];          // { id, name, size, addedAt, data (ArrayBuffer) }
+let currentDoc = null;  // pdfjsLib doc
+let currentDocId = null;
+let currentZoom = 1.0;
+let totalPages = 0;
+let deleteTargetId = null;
+let sortOrder = 'newest'; // 'newest' | 'oldest' | 'name'
+
+// ── IndexedDB ──
+const DB_NAME = '3tashfin';
+const DB_VER = 1;
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('pdfs')) {
+        db.createObjectStore('pdfs', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveDoc(doc) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('pdfs', 'readwrite');
+    tx.objectStore('pdfs').put(doc);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function loadAllDocs() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('pdfs', 'readonly');
+    const req = tx.objectStore('pdfs').getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteDoc(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('pdfs', 'readwrite');
+    tx.objectStore('pdfs').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getDocData(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('pdfs', 'readonly');
+    const req = tx.objectStore('pdfs').get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// ── Helpers ──
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Render File List ──
+function renderFileList(filter = '') {
+  const list = document.getElementById('fileList');
+  const q = filter.toLowerCase().trim();
+  let filtered = docs;
+  if (q) filtered = docs.filter(d => d.name.toLowerCase().includes(q));
+
+  // Sort
+  if (sortOrder === 'newest') filtered.sort((a, b) => b.addedAt - a.addedAt);
+  else if (sortOrder === 'oldest') filtered.sort((a, b) => a.addedAt - b.addedAt);
+  else filtered.sort((a, b) => a.name.localeCompare(b.name));
+
+  document.getElementById('docCount').textContent = `${docs.length} document${docs.length !== 1 ? 's' : ''}`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="11" x2="12" y2="17"/>
+            <line x1="9" y1="14" x2="15" y2="14"/>
+          </svg>
+        </div>
+        <h3>${q ? 'No results' : 'No documents yet'}</h3>
+        <p>${q ? 'Try a different search term' : 'Tap the + button to add your first PDF'}</p>
+      </div>`;
+    return;
+  }
+
+  // Group: today, yesterday, this week, older
+  const now = Date.now();
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  const yesterdayStart = new Date(todayStart - 86400000);
+  const weekStart = new Date(todayStart - 6 * 86400000);
+
+  const groups = { today: [], yesterday: [], week: [], older: [] };
+  filtered.forEach(d => {
+    if (d.addedAt >= todayStart.getTime()) groups.today.push(d);
+    else if (d.addedAt >= yesterdayStart.getTime()) groups.yesterday.push(d);
+    else if (d.addedAt >= weekStart.getTime()) groups.week.push(d);
+    else groups.older.push(d);
+  });
+
+  let html = '';
+  const renderGroup = (label, items) => {
+    if (items.length === 0) return;
+    html += `<div class="section-label">${label}</div>`;
+    items.forEach((d, i) => {
+      const thumbClass = `thumb-${Math.abs(hashCode(d.id)) % 8}`;
+      html += `
+        <div class="file-card" onclick="window.app.openDoc('${d.id}')">
+          <div class="file-thumb ${thumbClass}">PDF</div>
+          <div class="file-info">
+            <div class="file-name">${escHtml(d.name)}</div>
+            <div class="file-meta">
+              <span>${formatSize(d.size)}</span>
+              <span class="dot"></span>
+              <span>${timeAgo(d.addedAt)}</span>
+            </div>
+          </div>
+          <button class="file-delete" onclick="event.stopPropagation(); window.app.askDelete('${d.id}', '${escAttr(d.name)}')">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+            </svg>
+          </button>
+        </div>`;
+    });
+  };
+
+  if (sortOrder === 'name') {
+    filtered.forEach((d, i) => {
+      const thumbClass = `thumb-${Math.abs(hashCode(d.id)) % 8}`;
+      html += `
+        <div class="file-card" onclick="window.app.openDoc('${d.id}')">
+          <div class="file-thumb ${thumbClass}">PDF</div>
+          <div class="file-info">
+            <div class="file-name">${escHtml(d.name)}</div>
+            <div class="file-meta">
+              <span>${formatSize(d.size)}</span>
+              <span class="dot"></span>
+              <span>${timeAgo(d.addedAt)}</span>
+            </div>
+          </div>
+          <button class="file-delete" onclick="event.stopPropagation(); window.app.askDelete('${d.id}', '${escAttr(d.name)}')">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+            </svg>
+          </button>
+        </div>`;
+    });
+  } else {
+    renderGroup('Today', groups.today);
+    renderGroup('Yesterday', groups.yesterday);
+    renderGroup('This Week', groups.week);
+    renderGroup('Older', groups.older);
+  }
+
+  list.innerHTML = html;
+}
+
+function hashCode(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return h; }
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return s.replace(/'/g, "\\'").replace(/"/g, '\\"'); }
+
+// ── File Input Handler ──
+document.getElementById('fileInput').addEventListener('change', async function(e) {
+  const files = Array.from(e.target.files).filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
+  if (files.length === 0) { showToast('Please select PDF files'); return; }
+
+  for (const file of files) {
+    const buf = await file.arrayBuffer();
+    const doc = {
+      id: genId(),
+      name: file.name.replace(/\.pdf$/i, ''),
+      size: file.size,
+      addedAt: Date.now(),
+      data: buf,
+    };
+    await saveDoc(doc);
+    docs.push({ id: doc.id, name: doc.name, size: doc.size, addedAt: doc.addedAt });
+  }
+
+  showToast(`Added ${files.length} document${files.length > 1 ? 's' : ''}`);
+  renderFileList();
+  e.target.value = '';
+});
+
+// ── Open PDF ──
+async function openDoc(id) {
+  const loader = document.getElementById('loadingOverlay');
+  loader.classList.remove('hidden');
+
+  document.getElementById('listView').classList.remove('active');
+  document.getElementById('viewerView').classList.add('active');
+  document.getElementById('fabBtn').style.display = 'none';
+  document.getElementById('bottomNav').style.display = 'none';
+  document.getElementById('zoomControls').style.display = 'flex';
+
+  const record = await getDocData(id);
+  if (!record) { showToast('Document not found'); closeViewer(); return; }
+
+  document.getElementById('viewerTitle').textContent = record.name;
+  currentDocId = id;
+  currentZoom = 1.0;
+  document.getElementById('zoomLevel').textContent = '100%';
+
+  try {
+    currentDoc = await pdfjsLib.getDocument({ data: record.data.slice(0) }).promise;
+    totalPages = currentDoc.numPages;
+    await renderPages();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to open PDF');
+    closeViewer();
+    return;
+  }
+
+  loader.classList.add('hidden');
+}
+
+async function renderPages() {
+  const container = document.getElementById('pdfScroll');
+  // Remove old canvases but keep loading overlay
+  container.querySelectorAll('canvas').forEach(c => c.remove());
+
+  const scrollWidth = container.clientWidth - 32; // padding
+
+  for (let i = 1; i <= totalPages; i++) {
+    const page = await currentDoc.getPage(i);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const fitScale = scrollWidth / baseViewport.width;
+    const viewport = page.getViewport({ scale: fitScale * currentZoom });
+
+    const canvas = document.createElement('canvas');
+    canvas.dataset.page = i;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = viewport.width * dpr;
+    canvas.height = viewport.height * dpr;
+    canvas.style.width = viewport.width + 'px';
+    canvas.style.height = viewport.height + 'px';
+    ctx.scale(dpr, dpr);
+
+    container.appendChild(canvas);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+  }
+
+  updatePageIndicator();
+}
+
+// ── Page indicator on scroll ──
+function updatePageIndicator() {
+  const container = document.getElementById('pdfScroll');
+  const canvases = container.querySelectorAll('canvas');
+  if (canvases.length === 0) { document.getElementById('pageIndicator').textContent = '—'; return; }
+
+  const scrollMid = container.scrollTop + container.clientHeight / 2;
+  let cur = 1;
+  canvases.forEach((c, i) => {
+    if (c.offsetTop <= scrollMid) cur = i + 1;
+  });
+  document.getElementById('pageIndicator').textContent = `${cur} / ${totalPages}`;
+}
+
+document.getElementById('pdfScroll').addEventListener('scroll', updatePageIndicator);
+
+// ── Zoom ──
+window.changeZoom = function(delta) {
+  currentZoom = Math.min(3, Math.max(0.3, currentZoom + delta));
+  document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+  renderPages();
+};
+
+window.fitWidth = function() {
+  currentZoom = 1.0;
+  document.getElementById('zoomLevel').textContent = '100%';
+  renderPages();
+};
+
+// ── Close Viewer ──
+window.closeViewer = function() {
+  document.getElementById('viewerView').classList.remove('active');
+  document.getElementById('listView').classList.add('active');
+  document.getElementById('fabBtn').style.display = 'flex';
+  document.getElementById('bottomNav').style.display = 'flex';
+  document.getElementById('zoomControls').style.display = 'none';
+
+  // Cleanup canvases
+  document.getElementById('pdfScroll').querySelectorAll('canvas').forEach(c => c.remove());
+  currentDoc = null;
+  currentDocId = null;
+};
+
+// ── Delete ──
+window.app = {
+  openDoc,
+  askDelete(id, name) {
+    deleteTargetId = id;
+    document.getElementById('confirmTitle').textContent = 'Delete Document?';
+    document.getElementById('confirmMsg').textContent = `"${name}" will be permanently removed.`;
+    document.getElementById('confirmBackdrop').classList.add('show');
+  }
+};
+
+window.confirmDelete = async function() {
+  if (!deleteTargetId) return;
+  await deleteDoc(deleteTargetId);
+  docs = docs.filter(d => d.id !== deleteTargetId);
+  deleteTargetId = null;
+  closeConfirm();
+  renderFileList(document.getElementById('searchInput').value);
+  showToast('Document deleted');
+};
+
+window.closeConfirm = function() {
+  document.getElementById('confirmBackdrop').classList.remove('show');
+  deleteTargetId = null;
+};
+
+// ── Search ──
+window.filterFiles = function() {
+  renderFileList(document.getElementById('searchInput').value);
+};
+
+// ── Sort ──
+document.getElementById('sortBtn').addEventListener('click', () => {
+  const orders = ['newest', 'oldest', 'name'];
+  const labels = ['Newest first', 'Oldest first', 'By name'];
+  const idx = (orders.indexOf(sortOrder) + 1) % orders.length;
+  sortOrder = orders[idx];
+  showToast(`Sorted: ${labels[idx]}`);
+  renderFileList(document.getElementById('searchInput').value);
+});
+
+// ── Init ──
+async function init() {
+  try {
+    const all = await loadAllDocs();
+    docs = all.map(d => ({ id: d.id, name: d.name, size: d.size, addedAt: d.addedAt }));
+    renderFileList();
+  } catch (err) {
+    console.error('DB error:', err);
+    renderFileList();
+  }
+}
+
+init();
+
+// ── Service Worker ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
