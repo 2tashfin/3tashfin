@@ -283,7 +283,7 @@
   .fab svg { width: 26px; height: 26px; stroke: white; fill: none; stroke-width: 2.5; stroke-linecap: round; }
 
   /* ═══════════════════ PDF VIEWER VIEW ═══════════════════ */
-  .viewer-view { background: var(--surface-3); }
+  .viewer-view { background: #000; position: relative; }
 
   .viewer-toolbar {
     display: flex;
@@ -294,6 +294,15 @@
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
     gap: 10px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    z-index: 50;
+  }
+  .viewer-toolbar.hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0; left: 0; right: 0;
   }
   .back-btn {
     display: flex;
@@ -334,13 +343,84 @@
     text-align: center;
   }
 
+  /* Toolbar buttons row */
+  .viewer-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 16px;
+    background: var(--bg);
+    flex-shrink: 0;
+    gap: 8px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+  .viewer-toolbar-row.hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+    height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  .mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 6px 10px;
+    transition: all 0.15s;
+  }
+  .mode-btn:active { background: var(--surface-2); }
+  .mode-btn svg { width: 14px; height: 14px; stroke: var(--text-muted); fill: none; stroke-width: 2; }
+
+  /* Page Slider */
+  .page-slider-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px;
+  }
+  .page-slider-wrap span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 20px;
+    text-align: center;
+  }
+  .page-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--surface-3);
+    border-radius: 2px;
+    outline: none;
+  }
+  .page-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 6px rgba(108, 138, 255, 0.5);
+    cursor: pointer;
+  }
+
   /* Zoom Controls */
   .zoom-controls {
-    display: flex;
+    display: none;
     align-items: center;
     gap: 2px;
     position: fixed;
-    bottom: calc(20px + var(--safe-bottom));
+    bottom: calc(60px + var(--safe-bottom));
     left: 50%;
     transform: translateX(-50%);
     background: var(--bg);
@@ -349,7 +429,9 @@
     padding: 4px;
     z-index: 80;
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    transition: opacity 0.25s ease;
   }
+  .zoom-controls.hidden { opacity: 0; pointer-events: none; }
   .zoom-btn {
     width: 40px; height: 36px;
     border: none;
@@ -371,7 +453,7 @@
     text-align: center;
   }
 
-  /* PDF Canvas Area */
+  /* PDF Canvas Area — Vertical Scroll Mode */
   .pdf-scroll {
     flex: 1;
     overflow: auto;
@@ -389,6 +471,64 @@
     border-radius: 2px;
     max-width: 100%;
     height: auto !important;
+  }
+
+  /* Single Page Mode Container */
+  .single-page-container {
+    flex: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+    touch-action: pan-y;
+  }
+  .single-page-container.active { display: flex; }
+  .single-page-container canvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+  }
+
+  /* Floating Page Indicator (shown when toolbar hidden) */
+  .floating-page {
+    position: fixed;
+    bottom: calc(16px + var(--safe-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+    background: rgba(0,0,0,0.6);
+    padding: 6px 14px;
+    border-radius: 20px;
+    z-index: 60;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .floating-page.hidden { opacity: 0; }
+
+  /* Bottom Bar (shown when toolbar visible, in viewer) */
+  .viewer-bottom-bar {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    padding-bottom: calc(8px + var(--safe-bottom));
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 8px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    z-index: 50;
+  }
+  .viewer-bottom-bar.hidden {
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
   }
 
   /* Loading */
@@ -564,7 +704,7 @@
 
 <!-- ═══════════════════ VIEWER VIEW ═══════════════════ -->
 <div class="view viewer-view" id="viewerView">
-  <div class="viewer-toolbar">
+  <div class="viewer-toolbar" id="viewerToolbar">
     <button class="back-btn" onclick="closeViewer()">
       <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       Back
@@ -573,6 +713,19 @@
     <span class="page-indicator" id="pageIndicator">—</span>
   </div>
 
+  <div class="viewer-toolbar-row" id="viewerToolbarRow">
+    <button class="mode-btn" id="modeBtn" onclick="cycleReadingMode()">
+      <svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+      <span id="modeBtnLabel">Vertical</span>
+    </button>
+    <div class="page-slider-wrap">
+      <span id="sliderMin">1</span>
+      <input type="range" class="page-slider" id="pageSlider" min="1" max="1" value="1" />
+      <span id="sliderMax">1</span>
+    </div>
+  </div>
+
+  <!-- Vertical scroll container -->
   <div class="pdf-scroll" id="pdfScroll">
     <div class="loading-overlay" id="loadingOverlay">
       <div class="spinner"></div>
@@ -580,7 +733,14 @@
     </div>
   </div>
 
-  <div class="zoom-controls" id="zoomControls">
+  <!-- Single page container -->
+  <div class="single-page-container" id="singlePageContainer"></div>
+
+  <!-- Floating page number (visible when toolbar hidden) -->
+  <div class="floating-page hidden" id="floatingPage">1 / 1</div>
+
+  <!-- Bottom bar with zoom (visible when toolbar visible) -->
+  <div class="viewer-bottom-bar" id="viewerBottomBar">
     <button class="zoom-btn" onclick="changeZoom(-0.15)">
       <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
     </button>
@@ -616,18 +776,23 @@ import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs';
 
 // ── State ──
-let docs = [];          // { id, name, size, addedAt, starred, data (ArrayBuffer) }
-let currentDoc = null;  // pdfjsLib doc
+let docs = [];
+let currentDoc = null;
 let currentDocId = null;
 let currentZoom = 1.0;
 let totalPages = 0;
+let currentPage = 1;
 let deleteTargetId = null;
-let sortOrder = 'newest'; // 'newest' | 'oldest' | 'name'
-let currentNav = 'files'; // 'files' | 'starred'
+let sortOrder = 'newest';
+let currentNav = 'files';
+let readingMode = 'vertical'; // 'vertical' | 'ltr' | 'rtl'
+let toolbarVisible = true;
+let autoHideTimer = null;
+let pageCache = {};  // { pageNum: canvas } for single-page mode
 
 // ── IndexedDB ──
 const DB_NAME = '3tashfin';
-const DB_VER = 1;
+const DB_VER = 2;
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VER);
@@ -635,6 +800,9 @@ function openDB() {
       const db = e.target.result;
       if (!db.objectStoreNames.contains('pdfs')) {
         db.createObjectStore('pdfs', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('progress')) {
+        db.createObjectStore('progress', { keyPath: 'docId' });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -698,6 +866,31 @@ async function updateDocField(id, field, value) {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+}
+
+// ── Reading Progress ──
+async function saveProgress(docId, page, mode) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('progress', 'readwrite');
+      tx.objectStore('progress').put({ docId, page, mode, updatedAt: Date.now() });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) { /* ignore */ }
+}
+
+async function loadProgress(docId) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('progress', 'readonly');
+      const req = tx.objectStore('progress').get(docId);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch (e) { return null; }
 }
 
 // ── Helpers ──
@@ -764,7 +957,6 @@ function renderFileList(filter = '') {
   if (currentNav === 'starred') filtered = filtered.filter(d => d.starred);
   if (q) filtered = filtered.filter(d => d.name.toLowerCase().includes(q));
 
-  // Sort
   if (sortOrder === 'newest') filtered.sort((a, b) => b.addedAt - a.addedAt);
   else if (sortOrder === 'oldest') filtered.sort((a, b) => a.addedAt - b.addedAt);
   else filtered.sort((a, b) => a.name.localeCompare(b.name));
@@ -787,7 +979,6 @@ function renderFileList(filter = '') {
     return;
   }
 
-  // Group: today, yesterday, this week, older
   const now = Date.now();
   const todayStart = new Date(); todayStart.setHours(0,0,0,0);
   const yesterdayStart = new Date(todayStart - 86400000);
@@ -805,14 +996,14 @@ function renderFileList(filter = '') {
   const renderGroup = (label, items) => {
     if (items.length === 0) return;
     html += `<div class="section-label">${label}</div>`;
-    items.forEach((d, i) => {
+    items.forEach(d => {
       const thumbClass = `thumb-${Math.abs(hashCode(d.id)) % 8}`;
       html += buildFileCardHtml(d, thumbClass);
     });
   };
 
   if (sortOrder === 'name') {
-    filtered.forEach((d, i) => {
+    filtered.forEach(d => {
       const thumbClass = `thumb-${Math.abs(hashCode(d.id)) % 8}`;
       html += buildFileCardHtml(d, thumbClass);
     });
@@ -853,45 +1044,106 @@ document.getElementById('fileInput').addEventListener('change', async function(e
   e.target.value = '';
 });
 
-// ── Open PDF ──
-async function openDoc(id) {
-  const loader = document.getElementById('loadingOverlay');
-  loader.classList.remove('hidden');
+// ═══════════════════════════════════════════════════════
+// ── VIEWER ──
+// ═══════════════════════════════════════════════════════
 
-  document.getElementById('listView').classList.remove('active');
-  document.getElementById('viewerView').classList.add('active');
-  document.getElementById('fabBtn').style.display = 'none';
-  document.getElementById('bottomNav').style.display = 'none';
-  document.getElementById('zoomControls').style.display = 'flex';
+// ── Toolbar Visibility ──
+function setToolbarVisible(visible) {
+  toolbarVisible = visible;
+  const toolbar = document.getElementById('viewerToolbar');
+  const toolbarRow = document.getElementById('viewerToolbarRow');
+  const bottomBar = document.getElementById('viewerBottomBar');
+  const floating = document.getElementById('floatingPage');
 
-  const record = await getDocData(id);
-  if (!record) { showToast('Document not found'); closeViewer(); return; }
-
-  document.getElementById('viewerTitle').textContent = record.name;
-  currentDocId = id;
-  currentZoom = 1.0;
-  document.getElementById('zoomLevel').textContent = '100%';
-
-  try {
-    currentDoc = await pdfjsLib.getDocument({ data: record.data.slice(0) }).promise;
-    totalPages = currentDoc.numPages;
-    await renderPages();
-  } catch (err) {
-    console.error(err);
-    showToast('Failed to open PDF');
-    closeViewer();
-    return;
+  if (visible) {
+    toolbar.classList.remove('hidden');
+    toolbarRow.classList.remove('hidden');
+    bottomBar.classList.remove('hidden');
+    floating.classList.add('hidden');
+    resetAutoHide();
+  } else {
+    toolbar.classList.add('hidden');
+    toolbarRow.classList.add('hidden');
+    bottomBar.classList.add('hidden');
+    floating.classList.remove('hidden');
   }
-
-  loader.classList.add('hidden');
 }
 
+function toggleToolbar() {
+  setToolbarVisible(!toolbarVisible);
+}
+
+function resetAutoHide() {
+  clearTimeout(autoHideTimer);
+  autoHideTimer = setTimeout(() => {
+    if (toolbarVisible && currentDoc) setToolbarVisible(false);
+  }, 3000);
+}
+
+// ── Page Updates ──
+function setCurrentPage(page) {
+  page = Math.max(1, Math.min(totalPages, page));
+  if (page === currentPage && totalPages > 0) return;
+  currentPage = page;
+  updateAllPageDisplays();
+  saveProgress(currentDocId, currentPage, readingMode);
+}
+
+function updateAllPageDisplays() {
+  const text = `${currentPage} / ${totalPages}`;
+  document.getElementById('pageIndicator').textContent = text;
+  document.getElementById('floatingPage').textContent = text;
+  const slider = document.getElementById('pageSlider');
+  slider.value = readingMode === 'rtl' ? (totalPages - currentPage + 1) : currentPage;
+}
+
+// ── Reading Mode ──
+window.cycleReadingMode = function() {
+  const modes = ['vertical', 'ltr', 'rtl'];
+  const labels = ['Vertical', 'LTR', 'RTL'];
+  const idx = (modes.indexOf(readingMode) + 1) % modes.length;
+  readingMode = modes[idx];
+  document.getElementById('modeBtnLabel').textContent = labels[idx];
+  applyReadingMode();
+  showToast(`Mode: ${labels[idx]}`);
+  saveProgress(currentDocId, currentPage, readingMode);
+};
+
+function applyReadingMode() {
+  const scroll = document.getElementById('pdfScroll');
+  const single = document.getElementById('singlePageContainer');
+  const slider = document.getElementById('pageSlider');
+
+  if (readingMode === 'vertical') {
+    scroll.style.display = 'flex';
+    single.classList.remove('active');
+    renderPages();
+    // Scroll to current page
+    setTimeout(() => scrollToPage(currentPage), 100);
+  } else {
+    scroll.style.display = 'none';
+    single.classList.add('active');
+    pageCache = {};
+    renderSinglePage(currentPage);
+  }
+
+  // Update slider direction
+  slider.min = 1;
+  slider.max = totalPages;
+  if (readingMode === 'rtl') {
+    slider.value = totalPages - currentPage + 1;
+  } else {
+    slider.value = currentPage;
+  }
+}
+
+// ── Vertical Scroll Rendering ──
 async function renderPages() {
   const container = document.getElementById('pdfScroll');
-  // Remove old canvases but keep loading overlay
   container.querySelectorAll('canvas').forEach(c => c.remove());
 
-  const scrollWidth = container.clientWidth - 32; // padding
+  const scrollWidth = container.clientWidth - 32;
 
   for (let i = 1; i <= totalPages; i++) {
     const page = await currentDoc.getPage(i);
@@ -913,41 +1165,301 @@ async function renderPages() {
     await page.render({ canvasContext: ctx, viewport }).promise;
   }
 
-  updatePageIndicator();
+  updatePageFromScroll();
 }
 
-// ── Page indicator on scroll ──
-function updatePageIndicator() {
+function scrollToPage(pageNum) {
+  const container = document.getElementById('pdfScroll');
+  const canvas = container.querySelector(`canvas[data-page="${pageNum}"]`);
+  if (canvas) {
+    canvas.scrollIntoView({ behavior: 'instant', block: 'start' });
+  }
+}
+
+function updatePageFromScroll() {
   const container = document.getElementById('pdfScroll');
   const canvases = container.querySelectorAll('canvas');
-  if (canvases.length === 0) { document.getElementById('pageIndicator').textContent = '—'; return; }
+  if (canvases.length === 0) return;
 
   const scrollMid = container.scrollTop + container.clientHeight / 2;
   let cur = 1;
   canvases.forEach((c, i) => {
     if (c.offsetTop <= scrollMid) cur = i + 1;
   });
-  document.getElementById('pageIndicator').textContent = `${cur} / ${totalPages}`;
+  if (cur !== currentPage) {
+    currentPage = cur;
+    updateAllPageDisplays();
+    saveProgress(currentDocId, currentPage, readingMode);
+  }
 }
 
-document.getElementById('pdfScroll').addEventListener('scroll', updatePageIndicator);
+document.getElementById('pdfScroll').addEventListener('scroll', () => {
+  if (readingMode === 'vertical') {
+    updatePageFromScroll();
+    // Auto-hide toolbar on scroll
+    if (toolbarVisible) setToolbarVisible(false);
+  }
+});
 
-// ── Zoom ──
-window.changeZoom = function(delta) {
-  currentZoom = Math.min(3, Math.max(0.3, currentZoom + delta));
-  document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
-  renderPages();
-};
+// ── Single Page Rendering ──
+async function renderSinglePage(pageNum) {
+  if (!currentDoc || pageNum < 1 || pageNum > totalPages) return;
 
-window.fitWidth = function() {
-  currentZoom = 1.0;
-  document.getElementById('zoomLevel').textContent = '100%';
-  renderPages();
-};
+  const container = document.getElementById('singlePageContainer');
+  container.innerHTML = '';
+
+  const canvas = await renderPageCanvas(pageNum, container);
+  container.appendChild(canvas);
+
+  setCurrentPage(pageNum);
+
+  // Preload adjacent pages
+  preloadPage(pageNum - 1);
+  preloadPage(pageNum + 1);
+}
+
+async function renderPageCanvas(pageNum, containerEl) {
+  if (pageCache[pageNum]) return pageCache[pageNum].cloneNode(true);
+
+  const page = await currentDoc.getPage(pageNum);
+  const baseViewport = page.getViewport({ scale: 1 });
+
+  const container = containerEl || document.getElementById('singlePageContainer');
+  const maxW = container.clientWidth;
+  const maxH = container.clientHeight;
+
+  // Fit to container
+  const scaleW = maxW / baseViewport.width;
+  const scaleH = maxH / baseViewport.height;
+  const fitScale = Math.min(scaleW, scaleH) * currentZoom;
+  const viewport = page.getViewport({ scale: fitScale });
+
+  const canvas = document.createElement('canvas');
+  canvas.dataset.page = pageNum;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = viewport.width * dpr;
+  canvas.height = viewport.height * dpr;
+  canvas.style.width = viewport.width + 'px';
+  canvas.style.height = viewport.height + 'px';
+  ctx.scale(dpr, dpr);
+
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  // Cache it
+  if (Object.keys(pageCache).length > 5) {
+    const oldest = Object.keys(pageCache).map(Number).sort((a, b) => Math.abs(a - pageNum) - Math.abs(b - pageNum)).pop();
+    delete pageCache[oldest];
+  }
+  pageCache[pageNum] = canvas;
+
+  return canvas.cloneNode(true);
+}
+
+async function preloadPage(pageNum) {
+  if (!currentDoc || pageNum < 1 || pageNum > totalPages || pageCache[pageNum]) return;
+  try {
+    await renderPageCanvas(pageNum);
+  } catch (e) { /* ignore */ }
+}
+
+function goToPage(pageNum) {
+  if (pageNum < 1 || pageNum > totalPages) return;
+  if (readingMode === 'vertical') {
+    scrollToPage(pageNum);
+    setCurrentPage(pageNum);
+  } else {
+    renderSinglePage(pageNum);
+  }
+}
+
+function nextPage() {
+  if (readingMode === 'rtl') {
+    goToPage(currentPage - 1);
+  } else {
+    goToPage(currentPage + 1);
+  }
+}
+
+function prevPage() {
+  if (readingMode === 'rtl') {
+    goToPage(currentPage + 1);
+  } else {
+    goToPage(currentPage - 1);
+  }
+}
+
+// ── Page Slider ──
+document.getElementById('pageSlider').addEventListener('input', function(e) {
+  const val = parseInt(e.target.value);
+  const page = readingMode === 'rtl' ? (totalPages - val + 1) : val;
+  goToPage(page);
+});
+
+// ── Tap Zone Handler ──
+(function() {
+  const viewer = document.getElementById('viewerView');
+  let tapStartX = 0, tapStartY = 0, tapStartTime = 0;
+  let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+
+  viewer.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    tapStartX = e.touches[0].clientX;
+    tapStartY = e.touches[0].clientY;
+    tapStartTime = Date.now();
+  }, { passive: true });
+
+  viewer.addEventListener('touchend', function(e) {
+    if (e.changedTouches.length !== 1) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - tapStartX;
+    const dy = touch.clientY - tapStartY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const elapsed = Date.now() - tapStartTime;
+
+    // Ignore if it was a swipe or long press
+    if (dist > 20 || elapsed > 400) return;
+
+    // Ignore taps on buttons/controls
+    const target = e.target;
+    if (target.closest('.viewer-toolbar, .viewer-toolbar-row, .viewer-bottom-bar, .zoom-controls, button, input')) return;
+
+    const x = touch.clientX;
+    const y = touch.clientY;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const xPct = x / w;
+    const yPct = y / h;
+
+    // Double-tap detection
+    const now = Date.now();
+    const dtDist = Math.sqrt((x - lastTapX) ** 2 + (y - lastTapY) ** 2);
+    if (now - lastTapTime < 350 && dtDist < 40) {
+      // Double tap — zoom toggle
+      lastTapTime = 0;
+      doubleTapZoom(x, y);
+      e.preventDefault();
+      return;
+    }
+    lastTapTime = now;
+    lastTapX = x;
+    lastTapY = y;
+
+    // Single tap — use timeout to not conflict with double tap
+    setTimeout(() => {
+      if (lastTapTime !== now) return; // double tap happened
+
+      if (readingMode === 'vertical') {
+        // Vertical mode: center tap = toggle toolbar
+        toggleToolbar();
+      } else {
+        // Single page modes: Kindlish tap zones
+        if (yPct < 0.33) {
+          // Top third: toggle menu
+          toggleToolbar();
+        } else if (xPct < 0.33) {
+          // Left third (bottom 2/3): prev
+          prevPage();
+        } else if (xPct > 0.66) {
+          // Right third (bottom 2/3): next
+          nextPage();
+        } else {
+          // Center (bottom 2/3): toggle menu
+          toggleToolbar();
+        }
+      }
+    }, 360);
+  }, { passive: false });
+})();
+
+// ── Swipe Gesture (single page modes) ──
+(function() {
+  const container = document.getElementById('singlePageContainer');
+  let swipeStartX = 0, swipeStartY = 0, swiping = false;
+
+  container.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1 || readingMode === 'vertical') return;
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    swiping = true;
+  }, { passive: true });
+
+  container.addEventListener('touchmove', function(e) {
+    if (!swiping || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - swipeStartX;
+    const dy = e.touches[0].clientY - swipeStartY;
+
+    // Only horizontal swipe
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+      const canvas = container.querySelector('canvas');
+      if (canvas) {
+        canvas.style.transition = 'none';
+        canvas.style.transform = `translateX(${dx * 0.4}px)`;
+      }
+    }
+  }, { passive: true });
+
+  container.addEventListener('touchend', function(e) {
+    if (!swiping) return;
+    swiping = false;
+    const dx = e.changedTouches[0].clientX - swipeStartX;
+    const dy = e.changedTouches[0].clientY - swipeStartY;
+    const canvas = container.querySelector('canvas');
+
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      // Swipe threshold met
+      const direction = dx > 0 ? 'right' : 'left';
+
+      if (canvas) {
+        canvas.style.transition = 'transform 0.2s ease';
+        canvas.style.transform = `translateX(${dx > 0 ? '100%' : '-100%'})`;
+      }
+
+      setTimeout(() => {
+        if (readingMode === 'rtl') {
+          direction === 'right' ? prevPage() : nextPage();
+        } else {
+          direction === 'right' ? prevPage() : nextPage();
+        }
+      }, 180);
+    } else {
+      // Snap back
+      if (canvas) {
+        canvas.style.transition = 'transform 0.15s ease';
+        canvas.style.transform = 'translateX(0)';
+      }
+    }
+  }, { passive: true });
+})();
+
+// ── Double-Tap Zoom ──
+function doubleTapZoom(x, y) {
+  if (readingMode === 'vertical') {
+    // In vertical mode, toggle between 1x and 2x
+    if (currentZoom > 1.1) {
+      currentZoom = 1.0;
+    } else {
+      currentZoom = 2.0;
+    }
+    document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+    renderPages().then(() => scrollToPage(currentPage));
+  } else {
+    // In single page mode, toggle zoom
+    if (currentZoom > 1.1) {
+      currentZoom = 1.0;
+    } else {
+      currentZoom = 2.0;
+    }
+    document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+    pageCache = {};
+    renderSinglePage(currentPage);
+  }
+}
 
 // ── Pinch-to-Zoom ──
 (function() {
   const scrollEl = document.getElementById('pdfScroll');
+  const singleEl = document.getElementById('singlePageContainer');
   let pinchStartDist = 0;
   let pinchStartZoom = 1;
   let isPinching = false;
@@ -959,63 +1471,161 @@ window.fitWidth = function() {
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  scrollEl.addEventListener('touchstart', function(e) {
+  function onPinchStart(e) {
     if (e.touches.length === 2) {
       isPinching = true;
       pinchStartDist = getTouchDistance(e.touches[0], e.touches[1]);
       pinchStartZoom = currentZoom;
     }
-  }, { passive: true });
+  }
 
-  scrollEl.addEventListener('touchmove', function(e) {
+  function onPinchMove(e) {
     if (!isPinching || e.touches.length !== 2) return;
     e.preventDefault();
 
     const dist = getTouchDistance(e.touches[0], e.touches[1]);
     const scale = dist / pinchStartDist;
-    const newZoom = Math.min(3, Math.max(0.3, pinchStartZoom * scale));
-    currentZoom = newZoom;
+    currentZoom = Math.min(3, Math.max(0.3, pinchStartZoom * scale));
     document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
 
-    // Apply CSS transform for real-time feedback, defer full re-render
-    const canvases = scrollEl.querySelectorAll('canvas');
+    const target = readingMode === 'vertical' ? scrollEl : singleEl;
+    const canvases = target.querySelectorAll('canvas');
     const cssScale = currentZoom / pinchStartZoom;
     canvases.forEach(c => {
       c.style.transform = `scale(${cssScale})`;
       c.style.transformOrigin = 'center top';
     });
-  }, { passive: false });
+  }
 
-  scrollEl.addEventListener('touchend', function(e) {
+  function onPinchEnd(e) {
     if (!isPinching) return;
     if (e.touches.length < 2) {
       isPinching = false;
-      // Remove CSS transform and do a full re-render at the new zoom level
-      const canvases = scrollEl.querySelectorAll('canvas');
-      canvases.forEach(c => {
+      const target = readingMode === 'vertical' ? scrollEl : singleEl;
+      target.querySelectorAll('canvas').forEach(c => {
         c.style.transform = '';
         c.style.transformOrigin = '';
       });
       clearTimeout(renderTimeout);
-      renderTimeout = setTimeout(() => renderPages(), 50);
+      renderTimeout = setTimeout(() => {
+        if (readingMode === 'vertical') {
+          renderPages();
+        } else {
+          pageCache = {};
+          renderSinglePage(currentPage);
+        }
+      }, 50);
     }
-  }, { passive: true });
+  }
+
+  scrollEl.addEventListener('touchstart', onPinchStart, { passive: true });
+  scrollEl.addEventListener('touchmove', onPinchMove, { passive: false });
+  scrollEl.addEventListener('touchend', onPinchEnd, { passive: true });
+  singleEl.addEventListener('touchstart', onPinchStart, { passive: true });
+  singleEl.addEventListener('touchmove', onPinchMove, { passive: false });
+  singleEl.addEventListener('touchend', onPinchEnd, { passive: true });
 })();
+
+// ── Zoom Controls ──
+window.changeZoom = function(delta) {
+  currentZoom = Math.min(3, Math.max(0.3, currentZoom + delta));
+  document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+  if (readingMode === 'vertical') {
+    renderPages();
+  } else {
+    pageCache = {};
+    renderSinglePage(currentPage);
+  }
+};
+
+window.fitWidth = function() {
+  currentZoom = 1.0;
+  document.getElementById('zoomLevel').textContent = '100%';
+  if (readingMode === 'vertical') {
+    renderPages();
+  } else {
+    pageCache = {};
+    renderSinglePage(currentPage);
+  }
+};
+
+// ── Open PDF ──
+async function openDoc(id) {
+  const loader = document.getElementById('loadingOverlay');
+  loader.classList.remove('hidden');
+
+  document.getElementById('listView').classList.remove('active');
+  document.getElementById('viewerView').classList.add('active');
+  document.getElementById('fabBtn').style.display = 'none';
+  document.getElementById('bottomNav').style.display = 'none';
+
+  const record = await getDocData(id);
+  if (!record) { showToast('Document not found'); closeViewer(); return; }
+
+  document.getElementById('viewerTitle').textContent = record.name;
+  currentDocId = id;
+  currentZoom = 1.0;
+  currentPage = 1;
+  pageCache = {};
+  document.getElementById('zoomLevel').textContent = '100%';
+
+  try {
+    currentDoc = await pdfjsLib.getDocument({ data: record.data.slice(0) }).promise;
+    totalPages = currentDoc.numPages;
+
+    // Setup slider
+    const slider = document.getElementById('pageSlider');
+    slider.min = 1;
+    slider.max = totalPages;
+    slider.value = 1;
+    document.getElementById('sliderMin').textContent = '1';
+    document.getElementById('sliderMax').textContent = totalPages;
+
+    // Load saved progress
+    const progress = await loadProgress(id);
+    if (progress) {
+      currentPage = Math.min(progress.page || 1, totalPages);
+      if (progress.mode) {
+        readingMode = progress.mode;
+        const labels = { vertical: 'Vertical', ltr: 'LTR', rtl: 'RTL' };
+        document.getElementById('modeBtnLabel').textContent = labels[readingMode] || 'Vertical';
+      }
+    }
+
+    // Show toolbar initially, auto-hide after 3s
+    setToolbarVisible(true);
+
+    // Apply reading mode
+    applyReadingMode();
+
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to open PDF');
+    closeViewer();
+    return;
+  }
+
+  loader.classList.add('hidden');
+}
 
 // ── Close Viewer ──
 window.closeViewer = function() {
+  clearTimeout(autoHideTimer);
   document.getElementById('viewerView').classList.remove('active');
   document.getElementById('listView').classList.add('active');
   document.getElementById('fabBtn').style.display = 'flex';
   document.getElementById('bottomNav').style.display = 'flex';
-  document.getElementById('zoomControls').style.display = 'none';
 
-  // Cleanup canvases
+  // Cleanup
   document.getElementById('pdfScroll').querySelectorAll('canvas').forEach(c => c.remove());
+  document.getElementById('singlePageContainer').innerHTML = '';
+  pageCache = {};
   currentDoc = null;
   currentDocId = null;
 
-  // Re-render list in case starred status changed
+  // Reset toolbar state
+  setToolbarVisible(true);
+
   renderFileList(document.getElementById('searchInput').value);
 };
 
