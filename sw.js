@@ -1,4 +1,4 @@
-const CACHE_NAME = '3tashfin-v1';
+const CACHE_NAME = '3tashfin-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',
